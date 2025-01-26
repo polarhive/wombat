@@ -1,7 +1,7 @@
 **.json
-**.db
 **.csv
-wombat
 **.venv
+**.db**
 bin
-graph.db-journal
+wombat
+out

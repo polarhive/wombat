@@ -16,6 +16,7 @@ run:
 s.PHONY: clean
 clean:
 	rm -rf bin
+	rm -rf out/vault/*.md
 	rm -rf *.db
 	rm -rf *.db-journal
 	
