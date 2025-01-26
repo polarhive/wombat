@@ -50,19 +50,25 @@ func SaveNode(id string) {
 	stmt.Exec(id)
 }
 
-// saves a link between two nodes into the database.
+// saves a link between two nodes into the database, ensuring no duplicates.
 func SaveLink(source, target string) {
 	if source == "" || target == "" {
 		return
 	}
 
-	stmt, err := db.Prepare("INSERT INTO links(source, target) VALUES(?, ?)")
+	stmt, err := db.Prepare(`
+		INSERT OR IGNORE INTO links(source, target)
+		SELECT ?, ? 
+		WHERE NOT EXISTS (
+			SELECT 1 FROM links WHERE source = ? AND target = ?
+		)
+	`)
 	if err != nil {
 		log.Println("Error preparing SaveLink statement:", err)
 		return
 	}
 	defer stmt.Close()
-	stmt.Exec(source, target)
+	stmt.Exec(source, target, source, target)
 }
 
 func CloseDB() {
