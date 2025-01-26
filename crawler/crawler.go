@@ -10,14 +10,18 @@ import (
 )
 
 const (
-	maxGoroutines = 5
-	timeout       = 5
+	maxGoroutines = 100
+	timeout       = 0
 )
 
 var dbMutex sync.Mutex
-var visitedPages = map[string]bool{}
 
-func FetchAndStoreLinks(url string) {
+// FetchAndStoreLinks crawls a Wikipedia page and stores links recursively.
+func FetchAndStoreLinks(url string, depth int, output string) {
+	if depth <= 0 {
+		return
+	}
+
 	pageName := fetch.ExtractPageName(url)
 	if pageName == "" {
 		log.Println("Invalid URL, cannot extract page name")
@@ -33,7 +37,7 @@ func FetchAndStoreLinks(url string) {
 
 	log.Printf("Storing page '%s' into the database\n", pageName)
 
-	// lock the mutex before interacting with the database
+	// Lock the mutex before interacting with the database
 	dbMutex.Lock()
 	db.SaveNode(pageName)
 	dbMutex.Unlock()
@@ -57,12 +61,8 @@ func FetchAndStoreLinks(url string) {
 
 			time.Sleep(timeout * time.Millisecond)
 
-			// Recursively process to continue the crawl
-			if !visitedPages[link] {
-				visitedPages[link] = true
-				log.Printf("Recursively processing link: %s\n\n", link)
-				FetchAndStoreLinks("https://en.wikipedia.org/wiki/" + link)
-			}
+			// Recursively process the link as a new seed URL
+			FetchAndStoreLinks("https://en.wikipedia.org/wiki/"+link, depth-1, output)
 
 			<-semaphore
 		}(link)
@@ -70,4 +70,10 @@ func FetchAndStoreLinks(url string) {
 
 	wg.Wait()
 	log.Printf("Finished processing links for page: %s\n", pageName)
+
+	if output == "json" {
+	} else {
+		// Default DB output
+		log.Println("Data stored in the database.")
+	}
 }
