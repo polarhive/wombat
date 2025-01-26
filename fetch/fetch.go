@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -26,23 +27,34 @@ func FetchLinksFromWikipedia(pageName string) ([]string, error) {
 	}
 
 	var result map[string]interface{}
-	if err := httpGet(params, &result); err != nil {
+	err := httpGet(params, &result)
+	if err != nil {
 		return nil, err
 	}
 
-	pages, ok := result["query"].(map[string]interface{})["pages"].(map[string]interface{})
+	queryData, ok := result["query"].(map[string]interface{})
+	if !ok {
+		return nil, nil
+	}
+
+	pagesData, ok := queryData["pages"].(map[string]interface{})
 	if !ok {
 		return nil, nil
 	}
 
 	var links []string
-	for _, page := range pages {
+	for _, page := range pagesData {
 		pageData, ok := page.(map[string]interface{})
 		if !ok {
 			continue
 		}
 
-		for _, link := range pageData["links"].([]interface{}) {
+		linksData, ok := pageData["links"].([]interface{})
+		if !ok {
+			continue
+		}
+
+		for _, link := range linksData {
 			linkData, ok := link.(map[string]interface{})
 			if !ok {
 				continue
@@ -71,10 +83,17 @@ func httpGet(params map[string]string, result interface{}) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Println("Error during HTTP request:", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
-	return decoder.Decode(result)
+	err = decoder.Decode(result)
+	if err != nil {
+		log.Println("Error decoding response:", err)
+		return err
+	}
+
+	return nil
 }

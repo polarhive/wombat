@@ -3,3 +3,4 @@
 wombat
 **.venv
 bin
+graph.db-journal
