@@ -16,7 +16,7 @@ const (
 
 var dbMutex sync.Mutex
 
-// FetchAndStoreLinks crawls a Wikipedia page and stores links recursively.
+// FetchAndStoreLinks crawls a Wikipedia page and stores links, with depth control.
 func FetchAndStoreLinks(url string, depth int, output string) {
 	if depth <= 0 {
 		return
@@ -61,8 +61,10 @@ func FetchAndStoreLinks(url string, depth int, output string) {
 
 			time.Sleep(timeout * time.Millisecond)
 
-			// Recursively process the link as a new seed URL
-			FetchAndStoreLinks("https://en.wikipedia.org/wiki/"+link, depth-1, output)
+			// Decrement depth and process the link if still within allowed depth
+			if depth > 1 {
+				FetchAndStoreLinks("https://en.wikipedia.org/wiki/"+link, depth-1, output)
+			}
 
 			<-semaphore
 		}(link)
